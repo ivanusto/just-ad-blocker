@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Just Ad Blocker",
+  "version": "1.0.0",
+  "description": "一個小巧、高速且具備隱私保護的廣告與追蹤器攔截程式，支援 Manifest V3 與高效率規則壓縮",
+  "permissions": [
+    "declarativeNetRequest",
+    "storage",
+    "activeTab",
+    "webNavigation",
+    "alarms"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_core",
+        "enabled": true,
+        "path": "rulesets/rules_core.json"
+      },
+      {
+        "id": "ruleset_china",
+        "enabled": false,
+        "path": "rulesets/rules_china.json"
+      }
+    ]
+  },
+  "background": {{BACKGROUND_CONFIG}}
+}
