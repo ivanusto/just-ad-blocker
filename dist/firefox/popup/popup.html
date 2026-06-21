@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Just Ad Blocker</title>
+  <!-- Google Fonts Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Background Glows -->
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+    <!-- Header Section -->
+    <header class="app-header">
+      <div class="logo-area">
+        <img src="../icons/icon32.png" alt="Logo" class="logo-img">
+        <span class="logo-text">JUST <span class="logo-accent">AdBlock</span></span>
+      </div>
+      <div class="status-badge" id="statusBadge">已啟用</div>
+    </header>
+
+    <!-- Main Shield Toggle Area -->
+    <main class="main-panel">
+      <div class="shield-button-container">
+        <button class="shield-button active" id="powerBtn" aria-label="Toggle Protection">
+          <svg class="shield-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="shield-check" d="M9 11L11 13L15 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="pulse-ring"></div>
+        </button>
+      </div>
+      <p class="status-msg" id="statusMsg">您的網路瀏覽正受到保護</p>
+    </main>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="pageBlockedCount">0</div>
+        <div class="stat-label">此分頁已攔截</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalBlockedCount">0</div>
+        <div class="stat-label">累計總攔截數</div>
+      </div>
+    </section>
+
+    <!-- Controls Section -->
+    <section class="controls-section">
+      
+      <!-- Whitelist Switch -->
+      <div class="control-row whitelist-row" id="whitelistRow">
+        <div class="control-info">
+          <div class="control-title">在此網站暫停攔截</div>
+          <div class="control-subtitle" id="currentDomain">example.com</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="whitelistToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Ruleset Options -->
+      <div class="ruleset-container">
+        <div class="section-title">進階過濾器</div>
+        
+        <div class="control-row">
+          <div class="control-info">
+            <div class="control-title">Core 基本防護規則</div>
+            <div class="control-subtitle">防護全球核心廣告與追蹤網域</div>
+          </div>
+          <label class="switch disabled-switch">
+            <input type="checkbox" checked disabled>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="control-row">
+          <div class="control-info">
+            <div class="control-title">中文廣告優化規則 (AdRules)</div>
+            <div class="control-subtitle">針對亞洲/中文網站特定廣告強化</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="chinaRulesetToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-info">規則版本: 1.0.70 • 執行狀態: 正常</div>
+    </footer>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
