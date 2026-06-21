@@ -14,6 +14,7 @@ Output rulesets:
 import os
 import re
 import sys
+import glob
 import json
 import urllib.request
 
@@ -40,26 +41,40 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 # ~159k tracker/malware domains from the AdGuard DNS filter), just delete the
 # 'adguard_dns' entry below and keep 'easylist'.
 RULESETS = {
-    'rules_core.json': [
-        {
-            'name': 'adguard_dns',
-            'url': 'https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt',
-            'cache': 'filter_1_adguard_dns.txt',
-        },
-        {
-            'name': 'easylist',
-            'url': 'https://easylist.to/easylist/easylist.txt',
-            'cache': 'easylist.txt',
-        },
-    ],
-    'rules_china.json': [
-        {
-            'name': 'adrules',
-            'url': 'https://adguardteam.github.io/HostlistsRegistry/assets/filter_29.txt',
-            'cache': 'filter_29_adrules.txt',
-        },
-    ],
+    'core': {
+        'enabled': True,
+        'sources': [
+            {
+                'name': 'adguard_dns',
+                'url': 'https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt',
+                'cache': 'filter_1_adguard_dns.txt',
+            },
+            {
+                'name': 'easylist',
+                'url': 'https://easylist.to/easylist/easylist.txt',
+                'cache': 'easylist.txt',
+            },
+        ],
+    },
+    'china': {
+        'enabled': False,
+        'sources': [
+            {
+                'name': 'adrules',
+                'url': 'https://adguardteam.github.io/HostlistsRegistry/assets/filter_29.txt',
+                'cache': 'filter_29_adrules.txt',
+            },
+        ],
+    },
 }
+
+# Split each ruleset into files no larger than this (compact JSON). AMO refuses
+# to parse extension files over 5MB, so we keep a safe margin below that.
+MAX_FILE_BYTES = 4 * 1024 * 1024
+
+# Build-time index describing the generated ruleset files (id/enabled/path);
+# build.py reads this to assemble the manifest's declarative_net_request.
+INDEX_PATH = os.path.join(SRC_DIR, 'rulesets_index.json')
 
 # All declarativeNetRequest resource types (used when a rule has no $type option).
 RESOURCE_TYPES = [
@@ -486,24 +501,47 @@ def compile_ruleset(out_name, sources):
         keep = MAX_RULES_PER_SET - len(allow_rules) - len(domain_rules)
         assembled = allow_rules + domain_rules + block_rules[:max(0, keep)]
 
-    # Assign sequential ids.
-    for idx, rule in enumerate(assembled, start=1):
-        rule['id'] = idx
-
-    # Final self-validation: guarantee every emitted rule is well-formed.
-    validate_rules(assembled)
-
-    out_path = os.path.join(RULES_OUT_DIR, out_name)
-    with open(out_path, 'w', encoding='utf-8') as f:
-        json.dump(assembled, f, indent=2)
-
     print(f"  source lines parsed : {stats['lines']}")
     print(f"  unique block domains: {len(domain_list)} -> {len(domain_rules)} chunk rules")
     print(f"  path/regex blocks   : {len(block_rules)} (dropped {stats['bad_regex']} bad regex, {stats['bad_url']} bad urlFilter)")
     print(f"  exception (allow)   : {len(allow_rules)}")
     print(f"  unsupported dropped : {stats['dropped']}")
-    print(f"  TOTAL rules written : {len(assembled)} -> {out_path}")
-    return len(assembled)
+    print(f"  TOTAL rules         : {len(assembled)}")
+    return assembled
+
+
+def _rule_bytes(rule):
+    return len(json.dumps(rule, separators=(',', ':'), ensure_ascii=False))
+
+
+def write_split(name, rules):
+    """Write `rules` into one or more compact JSON files, each kept under
+    MAX_FILE_BYTES. Rule ids are assigned per file (each file is an independent
+    DNR ruleset). Returns the list of file names written."""
+    files = []
+    part = []
+    part_bytes = 2  # surrounding '[' and ']'
+
+    def flush():
+        for i, r in enumerate(part, start=1):
+            r['id'] = i
+        validate_rules(part)
+        fname = f'rules_{name}_{len(files) + 1}.json'
+        with open(os.path.join(RULES_OUT_DIR, fname), 'w', encoding='utf-8') as f:
+            json.dump(part, f, separators=(',', ':'), ensure_ascii=False)
+        files.append(fname)
+
+    for rule in rules:
+        size = _rule_bytes(rule) + 1  # +1 for the joining comma
+        if part and part_bytes + size > MAX_FILE_BYTES:
+            flush()
+            part = []
+            part_bytes = 2
+        part.append(rule)
+        part_bytes += size
+    if part:
+        flush()
+    return files
 
 
 def validate_rules(rules):
@@ -529,9 +567,26 @@ def validate_rules(rules):
 
 
 def main():
-    for out_name, sources in RULESETS.items():
-        compile_ruleset(out_name, sources)
-    print("\n=== Rule compilation complete ===")
+    # Remove stale ruleset files so renames/splits never leave orphans behind.
+    for old in glob.glob(os.path.join(RULES_OUT_DIR, 'rules_*.json')):
+        os.remove(old)
+
+    index = []
+    for name, cfg in RULESETS.items():
+        rules = compile_ruleset(name, cfg['sources'])
+        files = write_split(name, rules)
+        for n, fname in enumerate(files, start=1):
+            index.append({
+                'id': f'{name}_{n}',
+                'enabled': cfg['enabled'],
+                'path': f'rulesets/{fname}',
+            })
+        print(f"  written as {len(files)} file(s): {', '.join(files)}")
+
+    with open(INDEX_PATH, 'w', encoding='utf-8') as f:
+        json.dump(index, f, indent=2)
+    print(f"\nRuleset index ({len(index)} files) -> {INDEX_PATH}")
+    print("=== Rule compilation complete ===")
 
 
 if __name__ == '__main__':
