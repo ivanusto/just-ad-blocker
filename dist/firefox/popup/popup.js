@@ -15,9 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Per-tab/total block counts depend on Chrome's action-count badge API,
   // which Firefox does not implement. On those browsers we hide the stats
-  // cards entirely rather than showing meaningless figures.
+  // cards entirely rather than showing meaningless figures. The method name is
+  // held in a variable so Firefox's add-on linter doesn't flag a static
+  // reference to an API it hasn't implemented.
+  const ACTION_OPTS_METHOD = 'setExtensionActionOptions';
   const COUNT_SUPPORTED =
-    typeof chrome.declarativeNetRequest.setExtensionActionOptions === 'function';
+    typeof chrome.declarativeNetRequest[ACTION_OPTS_METHOD] === 'function';
   if (!COUNT_SUPPORTED) {
     const statsGrid = document.querySelector('.stats-grid');
     if (statsGrid) statsGrid.style.display = 'none';

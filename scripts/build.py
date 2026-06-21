@@ -102,11 +102,20 @@ def build_target(browser):
         
     manifest_str = manifest_str.replace('{{BACKGROUND_CONFIG}}', json.dumps(bg_config, indent=2))
 
-    # Firefox requires an explicit add-on id to be packaged/installed as an .xpi.
+    # Inject the ruleset list produced by compile_rules.py (one entry per split file).
+    with open(os.path.join(SRC_DIR, 'rulesets_index.json'), 'r', encoding='utf-8') as f:
+        rule_resources = json.load(f)
+    manifest_str = manifest_str.replace('{{RULE_RESOURCES}}', json.dumps(rule_resources, indent=2))
+
     manifest_obj = json.loads(manifest_str)
     if browser == 'firefox':
+        # Firefox needs an explicit add-on id, and now wants a data-collection
+        # declaration. This extension collects nothing -> "none".
         manifest_obj['browser_specific_settings'] = {
-            'gecko': {'id': 'just-ad-blocker@local'}
+            'gecko': {
+                'id': 'just-ad-blocker@local',
+                'data_collection_permissions': {'required': ['none']}
+            }
         }
 
     target_manifest = os.path.join(target_dir, 'manifest.json')

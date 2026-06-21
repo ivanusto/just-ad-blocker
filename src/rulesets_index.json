@@ -1,0 +1,22 @@
+[
+  {
+    "id": "core_1",
+    "enabled": true,
+    "path": "rulesets/rules_core_1.json"
+  },
+  {
+    "id": "core_2",
+    "enabled": true,
+    "path": "rulesets/rules_core_2.json"
+  },
+  {
+    "id": "china_1",
+    "enabled": false,
+    "path": "rulesets/rules_china_1.json"
+  },
+  {
+    "id": "china_2",
+    "enabled": false,
+    "path": "rulesets/rules_china_2.json"
+  }
+]

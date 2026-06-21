@@ -7,6 +7,10 @@ dist/chrome/_metadata/
 # Claude Code local settings
 .claude/
 
+# Python bytecode cache
+__pycache__/
+*.pyc
+
 # OS junk
 Thumbs.db
 .DS_Store
