@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Just Ad Blocker",
+  "name": "__MSG_extName__",
   "version": "1.0.0",
-  "description": "一個小巧、高速且具備隱私保護的廣告與追蹤器攔截程式，支援 Manifest V3 與高效率規則壓縮",
+  "description": "__MSG_extDesc__",
+  "default_locale": "en",
   "permissions": [
     "declarativeNetRequest",
     "storage",

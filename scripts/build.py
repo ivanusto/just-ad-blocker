@@ -75,7 +75,12 @@ def build_target(browser):
     # Copy rulesets
     target_rulesets = os.path.join(target_dir, 'rulesets')
     shutil.copytree(SRC_RULESETS_DIR, target_rulesets)
-    
+
+    # Copy i18n locale messages
+    src_locales = os.path.join(SRC_DIR, '_locales')
+    if os.path.isdir(src_locales):
+        shutil.copytree(src_locales, os.path.join(target_dir, '_locales'))
+
     # Copy background.js
     shutil.copy(os.path.join(SRC_DIR, 'background.js'), os.path.join(target_dir, 'background.js'))
     
