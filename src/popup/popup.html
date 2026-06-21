@@ -23,13 +23,13 @@
         <img src="../icons/icon32.png" alt="Logo" class="logo-img">
         <span class="logo-text">JUST <span class="logo-accent">AdBlock</span></span>
       </div>
-      <div class="status-badge" id="statusBadge">已啟用</div>
+      <div class="status-badge" id="statusBadge" data-i18n="statusEnabled">已啟用</div>
     </header>
 
     <!-- Main Shield Toggle Area -->
     <main class="main-panel">
       <div class="shield-button-container">
-        <button class="shield-button active" id="powerBtn" aria-label="Toggle Protection">
+        <button class="shield-button active" id="powerBtn" aria-label="Toggle Protection" data-i18n-aria="toggleProtection">
           <svg class="shield-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path class="shield-check" d="M9 11L11 13L15 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -37,18 +37,18 @@
           <div class="pulse-ring"></div>
         </button>
       </div>
-      <p class="status-msg" id="statusMsg">您的網路瀏覽正受到保護</p>
+      <p class="status-msg" id="statusMsg" data-i18n="protectedMsg">您的網路瀏覽正受到保護</p>
     </main>
 
     <!-- Stats Grid -->
     <section class="stats-grid">
       <div class="stat-card">
         <div class="stat-value" id="pageBlockedCount">0</div>
-        <div class="stat-label">此分頁已攔截</div>
+        <div class="stat-label" data-i18n="statPageBlocked">此分頁已攔截</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="totalBlockedCount">0</div>
-        <div class="stat-label">累計總攔截數</div>
+        <div class="stat-label" data-i18n="statTotalBlocked">累計總攔截數</div>
       </div>
     </section>
 
@@ -58,7 +58,7 @@
       <!-- Whitelist Switch -->
       <div class="control-row whitelist-row" id="whitelistRow">
         <div class="control-info">
-          <div class="control-title">在此網站暫停攔截</div>
+          <div class="control-title" data-i18n="whitelistTitle">在此網站暫停攔截</div>
           <div class="control-subtitle" id="currentDomain">example.com</div>
         </div>
         <label class="switch">
@@ -69,12 +69,12 @@
 
       <!-- Ruleset Options -->
       <div class="ruleset-container">
-        <div class="section-title">進階過濾器</div>
+        <div class="section-title" data-i18n="advancedFilters">進階過濾器</div>
         
         <div class="control-row">
           <div class="control-info">
-            <div class="control-title">Core 基本防護規則</div>
-            <div class="control-subtitle">防護全球核心廣告與追蹤網域</div>
+            <div class="control-title" data-i18n="coreRuleTitle">Core 基本防護規則</div>
+            <div class="control-subtitle" data-i18n="coreRuleSubtitle">防護全球核心廣告與追蹤網域</div>
           </div>
           <label class="switch disabled-switch">
             <input type="checkbox" checked disabled>
@@ -84,8 +84,8 @@
 
         <div class="control-row">
           <div class="control-info">
-            <div class="control-title">中文廣告優化規則 (AdRules)</div>
-            <div class="control-subtitle">針對亞洲/中文網站特定廣告強化</div>
+            <div class="control-title" data-i18n="chinaRuleTitle">中文廣告最佳化規則 (AdRules)</div>
+            <div class="control-subtitle" data-i18n="chinaRuleSubtitle">針對亞洲／中文網站特定廣告強化</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="chinaRulesetToggle">
@@ -98,7 +98,7 @@
 
     <!-- Footer -->
     <footer class="app-footer">
-      <div class="footer-info">規則版本: 1.0.70 • 執行狀態: 正常</div>
+      <div class="footer-info"><span data-i18n="footerStatus">執行狀態：正常</span></div>
     </footer>
 
   </div>
