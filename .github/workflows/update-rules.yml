@@ -5,7 +5,7 @@ name: Update filter rules
 # extension and publishes a new release.
 on:
   schedule:
-    - cron: '0 3 1,15 * *'   # 1st and 15th of each month at 03:00 UTC
+    - cron: '0 3 * * 1'        # every Monday at 03:00 UTC
   workflow_dispatch: {}        # also runnable manually from the Actions tab
 
 permissions:
@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
