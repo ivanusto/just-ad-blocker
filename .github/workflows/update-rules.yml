@@ -1,0 +1,74 @@
+name: Update filter rules
+
+# Runs on GitHub's servers (no local machine needed). Refreshes the filter
+# rules from upstream and, only if they actually changed, commits the rebuilt
+# extension and publishes a new release.
+on:
+  schedule:
+    - cron: '0 3 1,15 * *'   # 1st and 15th of each month at 03:00 UTC
+  workflow_dispatch: {}        # also runnable manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Bump patch version
+        id: bump
+        run: python scripts/bump_version.py
+
+      - name: Build extension (downloads latest filter lists)
+        run: python scripts/build.py
+
+      - name: Detect ruleset changes
+        id: changes
+        run: |
+          if git diff --quiet -- src/rulesets/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No ruleset changes since last run."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Filter rules changed; will release v${{ steps.bump.outputs.version }}."
+          fi
+
+      - name: Revert version bump if nothing changed
+        if: steps.changes.outputs.changed == 'false'
+        run: git checkout -- .
+
+      - name: Package release artifacts
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          V="${{ steps.bump.outputs.version }}"
+          ( cd dist/chrome && zip -qr "../../just-ad-blocker-chrome-v${V}.zip" . -x '_metadata/*' )
+          cp dist/firefox.xpi "just-ad-blocker-v${V}.xpi"
+
+      - name: Commit rebuilt extension
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m "chore: refresh filter rules to v${{ steps.bump.outputs.version }} [skip ci]"
+          git push
+
+      - name: Publish release
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ steps.bump.outputs.version }}"
+          gh release create "v${V}" \
+            "just-ad-blocker-chrome-v${V}.zip" \
+            "just-ad-blocker-v${V}.xpi" \
+            --title "Just Ad Blocker v${V}" \
+            --notes "Automated filter-rule refresh. Core/China rulesets recompiled from the latest AdGuard DNS filter, EasyList and AdRules."
