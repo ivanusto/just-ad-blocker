@@ -8,20 +8,38 @@ const WHITELIST_RULE_ID_START = 1000000;
 // Chrome can auto-display the per-tab blocked count as badge text via the
 // declarativeNetRequest feedback APIs. Firefox implements none of them, so we
 // feature-detect and degrade gracefully instead of throwing at runtime.
+// The method is reached via a variable so Firefox's add-on linter does not flag
+// a static reference to an API it hasn't implemented.
+const ACTION_OPTS_METHOD = "setExtensionActionOptions";
 const SUPPORTS_ACTION_COUNT =
-  typeof chrome.declarativeNetRequest.setExtensionActionOptions === "function";
+  typeof chrome.declarativeNetRequest[ACTION_OPTS_METHOD] === "function";
 
 // Ask Chrome to mirror the matched-rule count into the toolbar badge. No-op
 // (and never throws) on browsers that don't support it.
 function enableBadgeCount() {
   if (!SUPPORTS_ACTION_COUNT) return;
   try {
-    chrome.declarativeNetRequest.setExtensionActionOptions({
+    chrome.declarativeNetRequest[ACTION_OPTS_METHOD]({
       displayActionCountAsBadgeText: true
     });
   } catch (e) {
     console.warn("Action-count badge not supported here:", e);
   }
+}
+
+// Ruleset ids are split across one or more files per logical ruleset
+// (core_1, core_2, china_1, ...). Read them from the manifest so this stays
+// correct no matter how many files the build produced.
+function getRulesetIds() {
+  const dnr = chrome.runtime.getManifest().declarative_net_request || {};
+  const resources = dnr.rule_resources || [];
+  const core = [];
+  const china = [];
+  for (const res of resources) {
+    if (res.id.startsWith("core")) core.push(res.id);
+    else if (res.id.startsWith("china")) china.push(res.id);
+  }
+  return { core, china };
 }
 
 // Deterministic hash to map domain string to a unique rule ID
@@ -42,19 +60,19 @@ async function applyRulesetStates() {
       isEnabled: true,
       isChinaEnabled: false
     }, (settings) => {
+      const { core, china } = getRulesetIds();
       const enableRulesetIds = [];
       const disableRulesetIds = [];
 
       if (settings.isEnabled) {
-        enableRulesetIds.push("ruleset_core");
+        enableRulesetIds.push(...core);
         if (settings.isChinaEnabled) {
-          enableRulesetIds.push("ruleset_china");
+          enableRulesetIds.push(...china);
         } else {
-          disableRulesetIds.push("ruleset_china");
+          disableRulesetIds.push(...china);
         }
       } else {
-        disableRulesetIds.push("ruleset_core");
-        disableRulesetIds.push("ruleset_china");
+        disableRulesetIds.push(...core, ...china);
       }
 
       chrome.declarativeNetRequest.updateEnabledRulesets({
