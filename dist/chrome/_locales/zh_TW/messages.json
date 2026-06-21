@@ -1,0 +1,18 @@
+{
+  "extName": { "message": "Just Ad Blocker" },
+  "extDesc": { "message": "一個小巧、高速且具備隱私保護的廣告與追蹤器攔截程式，支援 Manifest V3 與高效率規則壓縮" },
+  "statusEnabled": { "message": "已啟用" },
+  "statusPaused": { "message": "已暫停" },
+  "protectedMsg": { "message": "您的網路瀏覽正受到保護" },
+  "pausedMsg": { "message": "廣告攔截已暫停防護" },
+  "statPageBlocked": { "message": "此分頁已攔截" },
+  "statTotalBlocked": { "message": "累計總攔截數" },
+  "whitelistTitle": { "message": "在此網站暫停攔截" },
+  "advancedFilters": { "message": "進階過濾器" },
+  "coreRuleTitle": { "message": "Core 基本防護規則" },
+  "coreRuleSubtitle": { "message": "防護全球核心廣告與追蹤網域" },
+  "chinaRuleTitle": { "message": "中文廣告最佳化規則 (AdRules)" },
+  "chinaRuleSubtitle": { "message": "針對亞洲／中文網站特定廣告強化" },
+  "footerStatus": { "message": "執行狀態：正常" },
+  "toggleProtection": { "message": "切換防護" }
+}

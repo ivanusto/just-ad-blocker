@@ -1,0 +1,18 @@
+{
+  "extName": { "message": "Just Ad Blocker" },
+  "extDesc": { "message": "A lightweight, fast, privacy-friendly ad & tracker blocker built on Manifest V3 with efficient rule compression." },
+  "statusEnabled": { "message": "Enabled" },
+  "statusPaused": { "message": "Paused" },
+  "protectedMsg": { "message": "Your browsing is protected" },
+  "pausedMsg": { "message": "Ad blocking is paused" },
+  "statPageBlocked": { "message": "Blocked on this tab" },
+  "statTotalBlocked": { "message": "Total blocked" },
+  "whitelistTitle": { "message": "Pause blocking on this site" },
+  "advancedFilters": { "message": "Advanced filters" },
+  "coreRuleTitle": { "message": "Core protection rules" },
+  "coreRuleSubtitle": { "message": "Blocks core global ad & tracker domains" },
+  "chinaRuleTitle": { "message": "Chinese ad optimization rules (AdRules)" },
+  "chinaRuleSubtitle": { "message": "Enhanced blocking for Asian / Chinese sites" },
+  "footerStatus": { "message": "Status: Active" },
+  "toggleProtection": { "message": "Toggle protection" }
+}

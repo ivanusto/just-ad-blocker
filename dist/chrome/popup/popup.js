@@ -23,6 +23,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statsGrid) statsGrid.style.display = 'none';
   }
 
+  // --- Localization (chrome.i18n) ---
+  const t = (key) => chrome.i18n.getMessage(key) || "";
+  function localizeStatic() {
+    document.documentElement.lang = chrome.i18n.getUILanguage();
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const msg = t(el.getAttribute('data-i18n'));
+      if (msg) el.textContent = msg;
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+      const msg = t(el.getAttribute('data-i18n-aria'));
+      if (msg) el.setAttribute('aria-label', msg);
+    });
+  }
+  localizeStatic();
+
   // Helper to extract clean domain
   function getDomainFromUrl(urlString) {
     try {
@@ -48,14 +63,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // 1. Update Global Power Switch
       if (settings.isEnabled) {
         powerBtn.classList.add('active');
-        statusBadge.textContent = "已啟用";
+        statusBadge.textContent = t('statusEnabled');
         statusBadge.classList.remove('inactive');
-        statusMsg.textContent = "您的網路瀏覽正受到保護";
+        statusMsg.textContent = t('protectedMsg');
       } else {
         powerBtn.classList.remove('active');
-        statusBadge.textContent = "已暫停";
+        statusBadge.textContent = t('statusPaused');
         statusBadge.classList.add('inactive');
-        statusMsg.textContent = "廣告攔截已暫停防護";
+        statusMsg.textContent = t('pausedMsg');
       }
 
       // 2. Update Total Blocked Stats
