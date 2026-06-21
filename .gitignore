@@ -1,0 +1,12 @@
+# Build cache (regenerable upstream filter lists, ~14 MB)
+scripts/.cache/
+
+# Chrome-generated indexed ruleset cache (created at load time)
+dist/chrome/_metadata/
+
+# Claude Code local settings
+.claude/
+
+# OS junk
+Thumbs.db
+.DS_Store
