@@ -17,6 +17,9 @@
   "collapseSubtitle": { "message": "Remove the empty space left by blocked ads" },
   "managedSitesTitle": { "message": "Paused sites" },
   "managedRemoveAria": { "message": "Remove" },
+  "customRulesTitle": { "message": "Custom blocked domains" },
+  "customRulePlaceholder": { "message": "e.g. popin.cc" },
+  "customRuleAdd": { "message": "Add" },
   "footerStatus": { "message": "Status: Active" },
   "toggleProtection": { "message": "Toggle protection" }
 }

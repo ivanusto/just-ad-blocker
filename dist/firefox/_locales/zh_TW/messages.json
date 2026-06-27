@@ -17,6 +17,9 @@
   "collapseSubtitle": { "message": "移除被攔截廣告留下的空白區塊" },
   "managedSitesTitle": { "message": "已暫停的網站" },
   "managedRemoveAria": { "message": "移除" },
+  "customRulesTitle": { "message": "自訂攔截網域" },
+  "customRulePlaceholder": { "message": "例如 popin.cc" },
+  "customRuleAdd": { "message": "新增" },
   "footerStatus": { "message": "執行狀態：正常" },
   "toggleProtection": { "message": "切換防護" }
 }
