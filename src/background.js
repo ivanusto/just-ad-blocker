@@ -199,7 +199,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     collapseEnabled: true,
     totalBlocked: 0,
     whitelist: [],
-    customBlocklist: []
+    customBlocklist: [],
+    customHideSelectors: []
   }, (result) => {
     chrome.storage.local.set(result);
   });

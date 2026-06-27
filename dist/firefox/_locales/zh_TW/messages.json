@@ -20,6 +20,8 @@
   "customRulesTitle": { "message": "自訂攔截網域" },
   "customRulePlaceholder": { "message": "例如 popin.cc" },
   "customRuleAdd": { "message": "新增" },
+  "customHideTitle": { "message": "自訂隱藏元素（CSS 選擇器）" },
+  "customHidePlaceholder": { "message": "例如 .ad-banner, #popin_recommend" },
   "footerStatus": { "message": "執行狀態：正常" },
   "toggleProtection": { "message": "切換防護" }
 }
