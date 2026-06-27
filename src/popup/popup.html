@@ -105,6 +105,18 @@
         </div>
       </div>
 
+      <!-- Custom block rules -->
+      <div class="ruleset-container">
+        <div class="section-title" data-i18n="customRulesTitle">自訂攔截網域</div>
+        <div class="custom-input-row">
+          <input type="text" id="customRuleInput" class="custom-input"
+                 placeholder="popin.cc" data-i18n-ph="customRulePlaceholder"
+                 autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button id="customRuleAdd" class="custom-add-btn" data-i18n="customRuleAdd">新增</button>
+        </div>
+        <ul class="managed-list" id="customList"></ul>
+      </div>
+
       <!-- Managed (whitelisted) sites -->
       <div class="ruleset-container" id="managedSitesContainer" style="display:none;">
         <div class="section-title" data-i18n="managedSitesTitle">已暫停的網站</div>
