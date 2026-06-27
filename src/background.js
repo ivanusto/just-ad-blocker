@@ -98,8 +98,8 @@ function rebuildWhitelistRules() {
 }
 
 // Rebuild user-defined block rules from the stored `customBlocklist` array. Each
-// entry is a domain (e.g. "popin.cc"); we block it and all its subdomains with a
-// `||domain^` urlFilter across every resource type. Same wipe-and-recreate
+// entry is a domain (e.g. "ads.example.com"); we block it and all its subdomains
+// with a `||domain^` urlFilter across every resource type. Same wipe-and-recreate
 // reconciler pattern as the whitelist, in the custom id band.
 function rebuildCustomRules() {
   return new Promise((resolve, reject) => {

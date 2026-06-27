@@ -18,10 +18,10 @@
   "managedSitesTitle": { "message": "已暫停的網站" },
   "managedRemoveAria": { "message": "移除" },
   "customRulesTitle": { "message": "自訂攔截網域" },
-  "customRulePlaceholder": { "message": "例如 popin.cc" },
+  "customRulePlaceholder": { "message": "例如 ads.example.com" },
   "customRuleAdd": { "message": "新增" },
   "customHideTitle": { "message": "自訂隱藏元素（CSS 選擇器）" },
-  "customHidePlaceholder": { "message": "例如 .ad-banner, #popin_recommend" },
+  "customHidePlaceholder": { "message": "例如 .ad-banner, #ad-slot" },
   "footerStatus": { "message": "執行狀態：正常" },
   "toggleProtection": { "message": "切換防護" }
 }
