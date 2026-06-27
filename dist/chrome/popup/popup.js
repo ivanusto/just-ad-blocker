@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const customRuleInput = document.getElementById('customRuleInput');
   const customRuleAdd = document.getElementById('customRuleAdd');
   const customList = document.getElementById('customList');
+  const hideSelectorInput = document.getElementById('hideSelectorInput');
+  const hideSelectorAdd = document.getElementById('hideSelectorAdd');
+  const hideList = document.getElementById('hideList');
 
   // Per-tab/total block counts depend on Chrome's action-count badge API,
   // which Firefox does not implement. On those browsers we hide the stats
@@ -80,45 +83,58 @@ document.addEventListener('DOMContentLoaded', () => {
     return s;
   }
 
-  // Render a domain list into `listEl`, each row with a remove button that sends
-  // `removeAction` to the background.
-  function renderDomainList(listEl, domains, removeAction, emptyHidesContainer) {
+  // Render a string list into `listEl`, each row with a remove button. `onRemove`
+  // is called with the item; it performs the removal and re-renders.
+  function renderItemList(listEl, items, onRemove) {
     if (!listEl) return;
     listEl.textContent = "";
-    (domains || []).forEach((domain) => {
+    (items || []).forEach((item) => {
       const li = document.createElement("li");
       li.className = "managed-item";
 
       const span = document.createElement("span");
       span.className = "managed-domain";
-      span.textContent = domain;
+      span.textContent = item; // textContent avoids any HTML injection
 
       const btn = document.createElement("button");
       btn.className = "managed-remove";
       btn.textContent = "×";
-      btn.setAttribute("aria-label", `${t('managedRemoveAria')} ${domain}`.trim());
-      btn.addEventListener("click", () => {
-        chrome.runtime.sendMessage({ action: removeAction, domain }, (response) => {
-          if (response && response.success) updateUI();
-          else console.error("Remove failed:", response ? response.error : "Unknown error");
-        });
-      });
+      btn.setAttribute("aria-label", `${t('managedRemoveAria')} ${item}`.trim());
+      btn.addEventListener("click", () => onRemove(item));
 
       li.appendChild(span);
       li.appendChild(btn);
       listEl.appendChild(li);
     });
-    if (emptyHidesContainer && managedSitesContainer) {
-      managedSitesContainer.style.display = (domains && domains.length) ? "flex" : "none";
-    }
+  }
+
+  function removeViaMessage(action, value) {
+    chrome.runtime.sendMessage({ action, domain: value }, (response) => {
+      if (response && response.success) updateUI();
+      else console.error("Remove failed:", response ? response.error : "Unknown error");
+    });
   }
 
   function renderManagedList(whitelist) {
-    renderDomainList(managedList, whitelist, "removeFromWhitelist", true);
+    renderItemList(managedList, whitelist, (d) => removeViaMessage("removeFromWhitelist", d));
+    if (managedSitesContainer) {
+      managedSitesContainer.style.display = (whitelist && whitelist.length) ? "flex" : "none";
+    }
   }
 
   function renderCustomList(customBlocklist) {
-    renderDomainList(customList, customBlocklist, "removeCustomRule", false);
+    renderItemList(customList, customBlocklist, (d) => removeViaMessage("removeCustomRule", d));
+  }
+
+  // Hide selectors are cosmetic-only (no DNR rules), so the popup writes storage
+  // directly; the content script reacts via storage.onChanged.
+  function renderHideList(selectors) {
+    renderItemList(hideList, selectors, (sel) => {
+      chrome.storage.local.get({ customHideSelectors: [] }, (r) => {
+        const next = r.customHideSelectors.filter((s) => s !== sel);
+        chrome.storage.local.set({ customHideSelectors: next }, updateUI);
+      });
+    });
   }
 
   // Update popup stats and visual states
@@ -129,7 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
       collapseEnabled: true,
       totalBlocked: 0,
       whitelist: [],
-      customBlocklist: []
+      customBlocklist: [],
+      customHideSelectors: []
     }, (settings) => {
       // 1. Update Global Power Switch
       if (settings.isEnabled) {
@@ -157,8 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // 3c. Render the list of whitelisted ("paused") sites
       renderManagedList(settings.whitelist);
 
-      // 3d. Render custom block rules
+      // 3d. Render custom block rules + hide selectors
       renderCustomList(settings.customBlocklist);
+      renderHideList(settings.customHideSelectors);
 
       // 4. Update Whitelist Switch
       if (currentDomain) {
@@ -268,6 +286,34 @@ document.addEventListener('DOMContentLoaded', () => {
   customRuleAdd.addEventListener('click', submitCustomRule);
   customRuleInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); submitCustomRule(); }
+  });
+
+  // Validate a CSS selector by attempting to use it; invalid syntax throws.
+  function isValidSelector(sel) {
+    try { document.createDocumentFragment().querySelector(sel); return true; }
+    catch (_) { return false; }
+  }
+
+  // Add a custom element-hiding CSS selector (cosmetic, stored directly).
+  function submitHideSelector() {
+    const sel = (hideSelectorInput.value || "").trim();
+    if (!sel || !isValidSelector(sel)) {
+      hideSelectorInput.focus();
+      hideSelectorInput.select();
+      return;
+    }
+    chrome.storage.local.get({ customHideSelectors: [] }, (r) => {
+      const list = r.customHideSelectors;
+      if (!list.includes(sel)) list.push(sel);
+      chrome.storage.local.set({ customHideSelectors: list }, () => {
+        hideSelectorInput.value = "";
+        updateUI();
+      });
+    });
+  }
+  hideSelectorAdd.addEventListener('click', submitHideSelector);
+  hideSelectorInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitHideSelector(); }
   });
 
   // Change Handler: China Ruleset Toggle
