@@ -124,12 +124,41 @@
     });
   }
 
-  // Resolve the active/whitelist gate, then flush anything we buffered.
+  // --- User-defined element hiding (CSS cosmetic filtering) ----------------
+  // We inject a single <style> with `selector { display:none !important }` for
+  // each user selector. CSS handles current and future matches automatically, so
+  // no per-element JS or MutationObserver is needed. Hiding is gated on
+  // isEnabled + whitelist (independent of the collapse toggle, since the user
+  // explicitly chose these selectors).
+  let hideStyleEl = null;
+  function applyHideSelectors(selectors, hideActive) {
+    const list = (hideActive && Array.isArray(selectors)) ? selectors.filter(Boolean) : [];
+    if (list.length === 0) {
+      if (hideStyleEl) { hideStyleEl.remove(); hideStyleEl = null; }
+      return;
+    }
+    // One rule per selector: an invalid selector only drops its own rule.
+    const css = list.map((s) => `${s}{display:none !important;}`).join("\n");
+    if (!hideStyleEl) {
+      hideStyleEl = document.createElement("style");
+      hideStyleEl.setAttribute("data-jab-hide", "");
+      (document.head || document.documentElement).appendChild(hideStyleEl);
+    }
+    hideStyleEl.textContent = css;
+  }
+
+  const SETTINGS_DEFAULTS = {
+    isEnabled: true, collapseEnabled: true, whitelist: [], customHideSelectors: []
+  };
+
+  // Resolve the active/whitelist gate, apply hide selectors, flush buffered events.
   try {
-    chrome.storage.local.get({ isEnabled: true, collapseEnabled: true, whitelist: [] }, (s) => {
+    chrome.storage.local.get(SETTINGS_DEFAULTS, (s) => {
       if (chrome.runtime.lastError) { active = false; queue.length = 0; return; }
       const host = stripWww(topHost() || "");
-      active = !!s.isEnabled && !!s.collapseEnabled && !s.whitelist.includes(host);
+      const notWhitelisted = !s.whitelist.includes(host);
+      active = !!s.isEnabled && !!s.collapseEnabled && notWhitelisted;
+      applyHideSelectors(s.customHideSelectors, !!s.isEnabled && notWhitelisted);
       if (active) queue.forEach(collapseChain);
       queue.length = 0;
     });
@@ -137,16 +166,19 @@
     active = false; // no storage access -> fail safe (collapse nothing)
   }
 
-  // React to the toggle/whitelist changing while the page is open (affects future
-  // events only; already-collapsed elements stay collapsed until reload).
+  // React to settings changing while the page is open. Collapse changes only
+  // affect future events; hide-selector changes re-apply live via the stylesheet.
   try {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
-      if (!("isEnabled" in changes) && !("collapseEnabled" in changes) && !("whitelist" in changes)) return;
-      chrome.storage.local.get({ isEnabled: true, collapseEnabled: true, whitelist: [] }, (s) => {
+      if (!("isEnabled" in changes) && !("collapseEnabled" in changes) &&
+          !("whitelist" in changes) && !("customHideSelectors" in changes)) return;
+      chrome.storage.local.get(SETTINGS_DEFAULTS, (s) => {
         if (chrome.runtime.lastError) return;
         const host = stripWww(topHost() || "");
-        active = !!s.isEnabled && !!s.collapseEnabled && !s.whitelist.includes(host);
+        const notWhitelisted = !s.whitelist.includes(host);
+        active = !!s.isEnabled && !!s.collapseEnabled && notWhitelisted;
+        applyHideSelectors(s.customHideSelectors, !!s.isEnabled && notWhitelisted);
       });
     });
   } catch (_) { /* ignore */ }
