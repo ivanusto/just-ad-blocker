@@ -8,6 +8,11 @@ const tabStatsCache = new Map();
 const WHITELIST_RULE_ID_START = 1000000;
 const WHITELIST_RULE_ID_RANGE = 10000000;
 
+// User-defined block rules live in their own id band, reconciled the same way as
+// the whitelist. Kept well clear of the whitelist band above.
+const CUSTOM_RULE_ID_START = 20000000;
+const CUSTOM_RULE_ID_RANGE = 10000000;
+
 // Chrome can auto-display the per-tab blocked count as badge text via the
 // declarativeNetRequest feedback APIs. Firefox implements none of them, so we
 // feature-detect and degrade gracefully instead of throwing at runtime.
@@ -66,7 +71,12 @@ function rebuildWhitelistRules() {
           priority: 100,
           action: { type: "allowAllRequests" },
           condition: {
-            initiatorDomains: [domain],
+            // Match the page's own navigation request (request domain = the site
+            // being opened), NOT initiatorDomains: a top-level main_frame request
+            // has no initiator, so initiatorDomains never matches it and
+            // allowAllRequests never fires. requestDomains matches the domain and
+            // its subdomains, exempting the whole tab from blocking.
+            requestDomains: [domain],
             resourceTypes: ["main_frame", "sub_frame"]
           }
         }));
@@ -76,6 +86,51 @@ function rebuildWhitelistRules() {
           () => {
             if (chrome.runtime.lastError) {
               console.error("Error rebuilding whitelist rules:", chrome.runtime.lastError);
+              reject(chrome.runtime.lastError);
+            } else {
+              resolve();
+            }
+          }
+        );
+      });
+    });
+  });
+}
+
+// Rebuild user-defined block rules from the stored `customBlocklist` array. Each
+// entry is a domain (e.g. "popin.cc"); we block it and all its subdomains with a
+// `||domain^` urlFilter across every resource type. Same wipe-and-recreate
+// reconciler pattern as the whitelist, in the custom id band.
+function rebuildCustomRules() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get({ customBlocklist: [] }, (result) => {
+      const list = Array.isArray(result.customBlocklist) ? result.customBlocklist : [];
+      chrome.declarativeNetRequest.getDynamicRules((existing) => {
+        const removeRuleIds = (existing || [])
+          .filter((r) =>
+            r.id >= CUSTOM_RULE_ID_START &&
+            r.id < CUSTOM_RULE_ID_START + CUSTOM_RULE_ID_RANGE)
+          .map((r) => r.id);
+
+        const addRules = list.map((domain, i) => ({
+          id: CUSTOM_RULE_ID_START + i,
+          priority: 1,
+          action: { type: "block" },
+          condition: {
+            urlFilter: `||${domain}^`,
+            resourceTypes: [
+              "main_frame", "sub_frame", "stylesheet", "script", "image",
+              "font", "object", "xmlhttprequest", "ping", "csp_report",
+              "media", "websocket", "other"
+            ]
+          }
+        }));
+
+        chrome.declarativeNetRequest.updateDynamicRules(
+          { removeRuleIds, addRules },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error("Error rebuilding custom rules:", chrome.runtime.lastError);
               reject(chrome.runtime.lastError);
             } else {
               resolve();
@@ -143,7 +198,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     isChinaEnabled: false,
     collapseEnabled: true,
     totalBlocked: 0,
-    whitelist: []
+    whitelist: [],
+    customBlocklist: []
   }, (result) => {
     chrome.storage.local.set(result);
   });
@@ -155,6 +211,9 @@ chrome.runtime.onInstalled.addListener(async () => {
   // by the old hash-based id scheme).
   await rebuildWhitelistRules().catch(() => {});
 
+  // Reconcile user-defined block rules.
+  await rebuildCustomRules().catch(() => {});
+
   // Then (best effort) enable the action-count badge.
   enableBadgeCount();
 });
@@ -163,6 +222,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 chrome.runtime.onStartup.addListener(async () => {
   await applyRulesetStates();
   await rebuildWhitelistRules().catch(() => {});
+  await rebuildCustomRules().catch(() => {});
   enableBadgeCount();
 });
 
@@ -254,6 +314,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const whitelist = result.whitelist.filter((d) => d !== domain);
       chrome.storage.local.set({ whitelist }, () => {
         rebuildWhitelistRules()
+          .then(() => sendResponse({ success: true }))
+          .catch((e) => sendResponse({ success: false, error: e && e.message }));
+      });
+    });
+    return true;
+  }
+
+  if (message.action === "addCustomRule") {
+    const domain = message.domain;
+    if (!domain) { sendResponse({ success: false, error: "empty domain" }); return false; }
+    chrome.storage.local.get({ customBlocklist: [] }, (result) => {
+      const list = result.customBlocklist;
+      if (!list.includes(domain)) list.push(domain);
+      chrome.storage.local.set({ customBlocklist: list }, () => {
+        rebuildCustomRules()
+          .then(() => sendResponse({ success: true }))
+          .catch((e) => sendResponse({ success: false, error: e && e.message }));
+      });
+    });
+    return true;
+  }
+
+  if (message.action === "removeCustomRule") {
+    const domain = message.domain;
+    chrome.storage.local.get({ customBlocklist: [] }, (result) => {
+      const list = result.customBlocklist.filter((d) => d !== domain);
+      chrome.storage.local.set({ customBlocklist: list }, () => {
+        rebuildCustomRules()
           .then(() => sendResponse({ success: true }))
           .catch((e) => sendResponse({ success: false, error: e && e.message }));
       });

@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const collapseToggle = document.getElementById('collapseToggle');
   const managedSitesContainer = document.getElementById('managedSitesContainer');
   const managedList = document.getElementById('managedList');
+  const customRuleInput = document.getElementById('customRuleInput');
+  const customRuleAdd = document.getElementById('customRuleAdd');
+  const customList = document.getElementById('customList');
 
   // Per-tab/total block counts depend on Chrome's action-count badge API,
   // which Firefox does not implement. On those browsers we hide the stats
@@ -41,6 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const msg = t(el.getAttribute('data-i18n-aria'));
       if (msg) el.setAttribute('aria-label', msg);
     });
+    document.querySelectorAll('[data-i18n-ph]').forEach((el) => {
+      const msg = t(el.getAttribute('data-i18n-ph'));
+      if (msg) el.setAttribute('placeholder', msg);
+    });
   }
   localizeStatic();
 
@@ -58,43 +65,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Render the list of whitelisted ("paused") sites, each with a remove button.
-  function renderManagedList(whitelist) {
-    if (!managedList || !managedSitesContainer) return;
-    managedList.textContent = "";
+  // Normalize free-text input into a bare domain: strip scheme, path, port and a
+  // leading "www.". Returns "" if it doesn't look like a domain.
+  function normalizeDomain(raw) {
+    let s = (raw || "").trim().toLowerCase();
+    if (!s) return "";
+    s = s.replace(/^[a-z]+:\/\//, ""); // scheme
+    s = s.split("/")[0].split("?")[0].split("#")[0]; // path/query/hash
+    s = s.split("@").pop();            // strip any userinfo
+    s = s.split(":")[0];               // strip port
+    if (s.startsWith("www.")) s = s.slice(4);
+    // Must look like a domain: labels of letters/digits/hyphen, at least one dot.
+    if (!/^([a-z0-9-]+\.)+[a-z0-9-]+$/.test(s)) return "";
+    return s;
+  }
 
-    if (!whitelist || whitelist.length === 0) {
-      managedSitesContainer.style.display = "none";
-      return;
-    }
-    managedSitesContainer.style.display = "flex";
-
-    whitelist.forEach((domain) => {
+  // Render a domain list into `listEl`, each row with a remove button that sends
+  // `removeAction` to the background.
+  function renderDomainList(listEl, domains, removeAction, emptyHidesContainer) {
+    if (!listEl) return;
+    listEl.textContent = "";
+    (domains || []).forEach((domain) => {
       const li = document.createElement("li");
       li.className = "managed-item";
 
       const span = document.createElement("span");
       span.className = "managed-domain";
-      span.textContent = domain; // textContent avoids any HTML injection from stored domains
+      span.textContent = domain;
 
       const btn = document.createElement("button");
       btn.className = "managed-remove";
-      btn.textContent = "×"; // ×
+      btn.textContent = "×";
       btn.setAttribute("aria-label", `${t('managedRemoveAria')} ${domain}`.trim());
       btn.addEventListener("click", () => {
-        chrome.runtime.sendMessage(
-          { action: "removeFromWhitelist", domain },
-          (response) => {
-            if (response && response.success) updateUI();
-            else console.error("Remove failed:", response ? response.error : "Unknown error");
-          }
-        );
+        chrome.runtime.sendMessage({ action: removeAction, domain }, (response) => {
+          if (response && response.success) updateUI();
+          else console.error("Remove failed:", response ? response.error : "Unknown error");
+        });
       });
 
       li.appendChild(span);
       li.appendChild(btn);
-      managedList.appendChild(li);
+      listEl.appendChild(li);
     });
+    if (emptyHidesContainer && managedSitesContainer) {
+      managedSitesContainer.style.display = (domains && domains.length) ? "flex" : "none";
+    }
+  }
+
+  function renderManagedList(whitelist) {
+    renderDomainList(managedList, whitelist, "removeFromWhitelist", true);
+  }
+
+  function renderCustomList(customBlocklist) {
+    renderDomainList(customList, customBlocklist, "removeCustomRule", false);
   }
 
   // Update popup stats and visual states
@@ -104,7 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
       isChinaEnabled: false,
       collapseEnabled: true,
       totalBlocked: 0,
-      whitelist: []
+      whitelist: [],
+      customBlocklist: []
     }, (settings) => {
       // 1. Update Global Power Switch
       if (settings.isEnabled) {
@@ -131,6 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 3c. Render the list of whitelisted ("paused") sites
       renderManagedList(settings.whitelist);
+
+      // 3d. Render custom block rules
+      renderCustomList(settings.customBlocklist);
 
       // 4. Update Whitelist Switch
       if (currentDomain) {
@@ -218,6 +246,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // storage.onChanged, so no message round-trip is needed.
   collapseToggle.addEventListener('change', () => {
     chrome.storage.local.set({ collapseEnabled: collapseToggle.checked });
+  });
+
+  // Add a custom block-rule domain.
+  function submitCustomRule() {
+    const domain = normalizeDomain(customRuleInput.value);
+    if (!domain) {
+      customRuleInput.focus();
+      customRuleInput.select();
+      return;
+    }
+    chrome.runtime.sendMessage({ action: "addCustomRule", domain }, (response) => {
+      if (response && response.success) {
+        customRuleInput.value = "";
+        updateUI();
+      } else {
+        console.error("Add custom rule failed:", response ? response.error : "Unknown error");
+      }
+    });
+  }
+  customRuleAdd.addEventListener('click', submitCustomRule);
+  customRuleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitCustomRule(); }
   });
 
   // Change Handler: China Ruleset Toggle
