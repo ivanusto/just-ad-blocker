@@ -2,7 +2,8 @@ name: Update filter rules
 
 # Runs on GitHub's servers (no local machine needed). Refreshes the filter
 # rules from upstream and, only if they actually changed, commits the rebuilt
-# extension and publishes a new release.
+# extension, publishes a GitHub release, and uploads to the Chrome Web Store
+# and Firefox AMO.
 on:
   schedule:
     - cron: '0 3 * * 1'        # every Monday at 03:00 UTC
@@ -22,6 +23,11 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Bump patch version
         id: bump
@@ -72,3 +78,28 @@ jobs:
             "just-ad-blocker-v${V}.xpi" \
             --title "Just Ad Blocker v${V}" \
             --notes "Automated filter-rule refresh. Core/China rulesets recompiled from the latest AdGuard DNS filter, EasyList and AdRules."
+
+      # --- Store publishing -------------------------------------------------
+      # Secrets are configured under repo Settings -> Secrets and variables ->
+      # Actions. The workflow only references them by name; the values never
+      # appear in logs (Actions masks secret values automatically).
+
+      - name: Publish to Chrome Web Store
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          npx --yes chrome-webstore-upload-cli@3 upload \
+            --source "just-ad-blocker-chrome-v${{ steps.bump.outputs.version }}.zip" \
+            --extension-id "${{ secrets.CWS_EXTENSION_ID }}" \
+            --client-id "${{ secrets.CWS_CLIENT_ID }}" \
+            --client-secret "${{ secrets.CWS_CLIENT_SECRET }}" \
+            --refresh-token "${{ secrets.CWS_REFRESH_TOKEN }}" \
+            --auto-publish
+
+      - name: Publish to Firefox AMO
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          npx --yes web-ext@latest sign \
+            --channel listed \
+            --source-dir dist/firefox \
+            --api-key "${{ secrets.AMO_JWT_ISSUER }}" \
+            --api-secret "${{ secrets.AMO_JWT_SECRET }}"
