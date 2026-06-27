@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const whitelistToggle = document.getElementById('whitelistToggle');
   const whitelistRow = document.getElementById('whitelistRow');
   const chinaRulesetToggle = document.getElementById('chinaRulesetToggle');
+  const collapseToggle = document.getElementById('collapseToggle');
+  const managedSitesContainer = document.getElementById('managedSitesContainer');
+  const managedList = document.getElementById('managedList');
 
   // Per-tab/total block counts depend on Chrome's action-count badge API,
   // which Firefox does not implement. On those browsers we hide the stats
@@ -55,11 +58,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Render the list of whitelisted ("paused") sites, each with a remove button.
+  function renderManagedList(whitelist) {
+    if (!managedList || !managedSitesContainer) return;
+    managedList.textContent = "";
+
+    if (!whitelist || whitelist.length === 0) {
+      managedSitesContainer.style.display = "none";
+      return;
+    }
+    managedSitesContainer.style.display = "flex";
+
+    whitelist.forEach((domain) => {
+      const li = document.createElement("li");
+      li.className = "managed-item";
+
+      const span = document.createElement("span");
+      span.className = "managed-domain";
+      span.textContent = domain; // textContent avoids any HTML injection from stored domains
+
+      const btn = document.createElement("button");
+      btn.className = "managed-remove";
+      btn.textContent = "×"; // ×
+      btn.setAttribute("aria-label", `${t('managedRemoveAria')} ${domain}`.trim());
+      btn.addEventListener("click", () => {
+        chrome.runtime.sendMessage(
+          { action: "removeFromWhitelist", domain },
+          (response) => {
+            if (response && response.success) updateUI();
+            else console.error("Remove failed:", response ? response.error : "Unknown error");
+          }
+        );
+      });
+
+      li.appendChild(span);
+      li.appendChild(btn);
+      managedList.appendChild(li);
+    });
+  }
+
   // Update popup stats and visual states
   function updateUI() {
     chrome.storage.local.get({
       isEnabled: true,
       isChinaEnabled: false,
+      collapseEnabled: true,
       totalBlocked: 0,
       whitelist: []
     }, (settings) => {
@@ -82,6 +125,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 3. Update China Ruleset Switch
       chinaRulesetToggle.checked = settings.isChinaEnabled;
+
+      // 3b. Update Collapse Switch
+      collapseToggle.checked = settings.collapseEnabled;
+
+      // 3c. Render the list of whitelisted ("paused") sites
+      renderManagedList(settings.whitelist);
 
       // 4. Update Whitelist Switch
       if (currentDomain) {
@@ -163,6 +212,12 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Whitelist action failed:", response ? response.error : "Unknown error");
       }
     });
+  });
+
+  // Change Handler: Collapse Toggle. The content script reacts via
+  // storage.onChanged, so no message round-trip is needed.
+  collapseToggle.addEventListener('change', () => {
+    chrome.storage.local.set({ collapseEnabled: collapseToggle.checked });
   });
 
   // Change Handler: China Ruleset Toggle

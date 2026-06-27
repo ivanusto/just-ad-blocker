@@ -2,8 +2,11 @@
 // Maps tabId -> { count: number, url: string }
 const tabStatsCache = new Map();
 
-// Dynamic rule ID offset for whitelisted domains
+// Dynamic rule ID offset for whitelisted domains. Whitelist rules live in the
+// id band [START, START + RANGE); everything in that band is owned by the
+// whitelist reconciler below.
 const WHITELIST_RULE_ID_START = 1000000;
+const WHITELIST_RULE_ID_RANGE = 10000000;
 
 // Chrome can auto-display the per-tab blocked count as badge text via the
 // declarativeNetRequest feedback APIs. Firefox implements none of them, so we
@@ -42,15 +45,46 @@ function getRulesetIds() {
   return { core, china };
 }
 
-// Deterministic hash to map domain string to a unique rule ID
-function getWhitelistRuleId(domain) {
-  let hash = 0;
-  for (let i = 0; i < domain.length; i++) {
-    const char = domain.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return WHITELIST_RULE_ID_START + (Math.abs(hash) % 8999999);
+// Rebuild every whitelist dynamic rule from the stored `whitelist` array. IDs are
+// assigned by array index (START + i), so they are unique by construction — no
+// hashing, no collisions. This is the single source of truth: it wipes the whole
+// whitelist id band and re-creates it, which also self-heals duplicates and
+// migrates rules left behind by the previous hash-based scheme.
+function rebuildWhitelistRules() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get({ whitelist: [] }, (result) => {
+      const whitelist = Array.isArray(result.whitelist) ? result.whitelist : [];
+      chrome.declarativeNetRequest.getDynamicRules((existing) => {
+        const removeRuleIds = (existing || [])
+          .filter((r) =>
+            r.id >= WHITELIST_RULE_ID_START &&
+            r.id < WHITELIST_RULE_ID_START + WHITELIST_RULE_ID_RANGE)
+          .map((r) => r.id);
+
+        const addRules = whitelist.map((domain, i) => ({
+          id: WHITELIST_RULE_ID_START + i,
+          priority: 100,
+          action: { type: "allowAllRequests" },
+          condition: {
+            initiatorDomains: [domain],
+            resourceTypes: ["main_frame", "sub_frame"]
+          }
+        }));
+
+        chrome.declarativeNetRequest.updateDynamicRules(
+          { removeRuleIds, addRules },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error("Error rebuilding whitelist rules:", chrome.runtime.lastError);
+              reject(chrome.runtime.lastError);
+            } else {
+              resolve();
+            }
+          }
+        );
+      });
+    });
+  });
 }
 
 // Update enabled rulesets based on user settings
@@ -107,6 +141,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   chrome.storage.local.get({
     isEnabled: true,
     isChinaEnabled: false,
+    collapseEnabled: true,
     totalBlocked: 0,
     whitelist: []
   }, (result) => {
@@ -116,6 +151,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   // Apply ruleset states first so blocking works regardless of badge support.
   await applyRulesetStates();
 
+  // Reconcile whitelist dynamic rules from storage (also migrates any rules left
+  // by the old hash-based id scheme).
+  await rebuildWhitelistRules().catch(() => {});
+
   // Then (best effort) enable the action-count badge.
   enableBadgeCount();
 });
@@ -123,6 +162,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 // Sync rulesets when extension starts
 chrome.runtime.onStartup.addListener(async () => {
   await applyRulesetStates();
+  await rebuildWhitelistRules().catch(() => {});
   enableBadgeCount();
 });
 
@@ -196,57 +236,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === "addToWhitelist") {
     const domain = message.domain;
-    const ruleId = getWhitelistRuleId(domain);
-    
-    const newRule = {
-      id: ruleId,
-      priority: 100,
-      action: { type: "allowAllRequests" },
-      condition: {
-        initiatorDomains: [domain],
-        resourceTypes: ["main_frame", "sub_frame"]
-      }
-    };
-    
-    chrome.declarativeNetRequest.updateDynamicRules({
-      addRules: [newRule],
-      removeRuleIds: [ruleId] // Remove old one if exists to prevent duplication
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.error("Error adding whitelist rule:", chrome.runtime.lastError);
-        sendResponse({ success: false, error: chrome.runtime.lastError.message });
-      } else {
-        // Update whitelist in storage
-        chrome.storage.local.get({ whitelist: [] }, (result) => {
-          const whitelist = result.whitelist;
-          if (!whitelist.includes(domain)) {
-            whitelist.push(domain);
-            chrome.storage.local.set({ whitelist: whitelist });
-          }
-          sendResponse({ success: true });
-        });
-      }
+    chrome.storage.local.get({ whitelist: [] }, (result) => {
+      const whitelist = result.whitelist;
+      if (!whitelist.includes(domain)) whitelist.push(domain);
+      chrome.storage.local.set({ whitelist }, () => {
+        rebuildWhitelistRules()
+          .then(() => sendResponse({ success: true }))
+          .catch((e) => sendResponse({ success: false, error: e && e.message }));
+      });
     });
     return true;
   }
-  
+
   if (message.action === "removeFromWhitelist") {
     const domain = message.domain;
-    const ruleId = getWhitelistRuleId(domain);
-    
-    chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: [ruleId]
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.error("Error removing whitelist rule:", chrome.runtime.lastError);
-        sendResponse({ success: false, error: chrome.runtime.lastError.message });
-      } else {
-        chrome.storage.local.get({ whitelist: [] }, (result) => {
-          const whitelist = result.whitelist.filter(d => d !== domain);
-          chrome.storage.local.set({ whitelist: whitelist });
-          sendResponse({ success: true });
-        });
-      }
+    chrome.storage.local.get({ whitelist: [] }, (result) => {
+      const whitelist = result.whitelist.filter((d) => d !== domain);
+      chrome.storage.local.set({ whitelist }, () => {
+        rebuildWhitelistRules()
+          .then(() => sendResponse({ success: true }))
+          .catch((e) => sendResponse({ success: false, error: e && e.message }));
+      });
     });
     return true;
   }

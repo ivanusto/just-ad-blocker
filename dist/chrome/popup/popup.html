@@ -70,7 +70,7 @@
       <!-- Ruleset Options -->
       <div class="ruleset-container">
         <div class="section-title" data-i18n="advancedFilters">進階過濾器</div>
-        
+
         <div class="control-row">
           <div class="control-info">
             <div class="control-title" data-i18n="coreRuleTitle">Core 基本防護規則</div>
@@ -92,6 +92,23 @@
             <span class="slider"></span>
           </label>
         </div>
+
+        <div class="control-row">
+          <div class="control-info">
+            <div class="control-title" data-i18n="collapseTitle">收合廣告留下的空位</div>
+            <div class="control-subtitle" data-i18n="collapseSubtitle">移除被攔截廣告留下的空白區塊</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="collapseToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Managed (whitelisted) sites -->
+      <div class="ruleset-container" id="managedSitesContainer" style="display:none;">
+        <div class="section-title" data-i18n="managedSitesTitle">已暫停的網站</div>
+        <ul class="managed-list" id="managedList"></ul>
       </div>
 
     </section>
