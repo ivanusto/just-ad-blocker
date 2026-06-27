@@ -51,6 +51,7 @@ HOW TO USE
 2. Use the main toggle to enable or pause ad blocking globally.
 3. To whitelist the current site, click "Pause blocking on this site" in the popup.
 4. To enable enhanced filtering for Chinese/Asian websites, expand "Advanced filters" and turn on the AdRules toggle.
+5. To block a domain the lists missed, add it under "Custom blocked domains" (covers all subdomains; reload the page after adding). To remove a leftover empty ad slot, add a CSS selector under "Custom hidden elements".
 
 PERMISSIONS
 This extension uses only the permissions required to block ads and tidy the resulting layout. It does not collect your browsing history, passwords, or personal data. Network blocking runs as static filter lists inside the browser, and the on-page tidy-up script inspects page layout locally only — nothing is sent externally.

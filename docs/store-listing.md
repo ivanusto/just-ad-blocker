@@ -48,6 +48,7 @@ HOW TO USE
 2. Use the main toggle to enable or pause ad blocking globally.
 3. To whitelist the current site, click "Pause blocking on this site" in the popup.
 4. To enable enhanced filtering for Chinese/Asian websites, expand "Advanced filters" and turn on the AdRules toggle.
+5. To block a domain the lists missed, add it under "Custom blocked domains" (covers all subdomains; reload the page after adding). To remove a leftover empty ad slot, add a CSS selector under "Custom hidden elements".
 
 PERMISSIONS
 This extension uses only the permissions required to block ads and tidy the resulting layout. It does not collect your browsing history, passwords, or personal data. Network blocking runs as static filter lists inside the browser, and the on-page tidy-up script inspects page layout locally only — nothing is sent externally.
@@ -75,6 +76,7 @@ Just Ad Blocker 讓你的瀏覽乾淨又快速，同時完整保護隱私。
 2. 使用主開關全域啟用或暫停廣告攔截。
 3. 若要將目前網站加入白名單，點擊「在此網站暫停攔截」。
 4. 若要啟用中文／亞洲網站強化過濾，展開「進階過濾器」並開啟 AdRules 開關。
+5. 若上游清單漏擋某網域，於「自訂攔截網域」加入（涵蓋所有子網域，加入後請重新整理頁面）。若廣告留下空容器，於「自訂隱藏元素」加入 CSS 選擇器即可隱藏。
 
 隱私說明
 本擴充功能不蒐集任何資料、不連接遠端伺服器、不含任何分析工具。你的設定（啟用狀態、白名單）僅儲存於本機瀏覽器儲存空間。
