@@ -13,6 +13,10 @@
   "coreRuleSubtitle": { "message": "Blocks core global ad & tracker domains" },
   "chinaRuleTitle": { "message": "Chinese ad optimization rules (AdRules)" },
   "chinaRuleSubtitle": { "message": "Enhanced blocking for Asian / Chinese sites" },
+  "collapseTitle": { "message": "Collapse leftover ad gaps" },
+  "collapseSubtitle": { "message": "Remove the empty space left by blocked ads" },
+  "managedSitesTitle": { "message": "Paused sites" },
+  "managedRemoveAria": { "message": "Remove" },
   "footerStatus": { "message": "Status: Active" },
   "toggleProtection": { "message": "Toggle protection" }
 }
