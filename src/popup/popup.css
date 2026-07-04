@@ -6,7 +6,7 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
   background-color: #05070c;
   color: #f8fafc;
   width: 320px;
@@ -69,7 +69,7 @@ body {
 }
 
 .logo-text {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.5px;
@@ -230,7 +230,7 @@ body {
 }
 
 .stat-value {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
   font-size: 20px;
   font-weight: 700;
   background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
@@ -412,7 +412,7 @@ input:checked + .slider:before {
   min-width: 0;
   padding: 8px 12px;
   font-size: 12px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
   color: #e2e8f0;
   background: rgba(15, 23, 42, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -434,7 +434,7 @@ input:checked + .slider:before {
   padding: 0 14px;
   font-size: 12px;
   font-weight: 600;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
   color: #06b6d4;
   background: rgba(6, 182, 212, 0.1);
   border: 1px solid rgba(6, 182, 212, 0.3);

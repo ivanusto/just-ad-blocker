@@ -1,6 +1,41 @@
-// Memory cache for last seen badge counts per tab
-// Maps tabId -> { count: number, url: string }
-const tabStatsCache = new Map();
+// Last-seen badge count per tab, keyed by tabId. Kept in chrome.storage.session
+// so a service-worker restart doesn't reset it: with an in-memory cache, every
+// restart re-counted each tab's full badge value into totalBlocked, inflating
+// the total. Falls back to module state where storage.session is unavailable.
+const TAB_COUNTS_KEY = "tabBadgeCounts";
+const sessionStore =
+  chrome.storage && chrome.storage.session ? chrome.storage.session : null;
+let memTabCounts = {};
+
+function getTabCounts() {
+  if (!sessionStore) return Promise.resolve(memTabCounts);
+  return sessionStore.get({ [TAB_COUNTS_KEY]: {} }).then((r) => r[TAB_COUNTS_KEY]);
+}
+
+function setTabCounts(counts) {
+  if (!sessionStore) { memTabCounts = counts; return Promise.resolve(); }
+  return sessionStore.set({ [TAB_COUNTS_KEY]: counts });
+}
+
+// The badge poll and the pre-navigation harvest both read-modify-write the
+// counts map and the running total; chain them so overlapping events can't
+// count the same blocks twice.
+let statsChain = Promise.resolve();
+function withStatsLock(fn) {
+  statsChain = statsChain.then(fn, fn);
+  return statsChain;
+}
+
+// Badge text for a tab as a number; null if the tab is gone.
+function getBadgeCount(tabId) {
+  return new Promise((resolve) => {
+    chrome.action.getBadgeText({ tabId }, (text) => {
+      if (chrome.runtime.lastError) { resolve(null); return; }
+      const n = parseInt(text, 10);
+      resolve(isNaN(n) ? 0 : n);
+    });
+  });
+}
 
 // Dynamic rule ID offset for whitelisted domains. Whitelist rules live in the
 // id band [START, START + RANGE); everything in that band is owned by the
@@ -231,61 +266,50 @@ chrome.runtime.onStartup.addListener(async () => {
 // These rely on the action-count badge, which Firefox does not implement, so
 // the guards below keep Firefox free of errors and wasted polling.
 if (SUPPORTS_ACTION_COUNT) {
-  // Poll the per-tab badge count every ~10 seconds.
-  chrome.alarms.create("pollBadgeCounts", { periodInMinutes: 0.15 });
+  // Poll the per-tab badge counts. Chrome clamps alarm periods below 30s (and
+  // logs a warning for them), so ask for exactly the minimum.
+  chrome.alarms.create("pollBadgeCounts", { periodInMinutes: 0.5 });
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "pollBadgeCounts") {
-    chrome.tabs.query({}, (tabs) => {
-      tabs.forEach((tab) => {
-        if (!tab.id || tab.id === chrome.tabs.TAB_ID_NONE) return;
-        
-        chrome.action.getBadgeText({ tabId: tab.id }, (badgeText) => {
-          if (chrome.runtime.lastError) {
-            // Tab might have closed or not loaded yet
-            return;
-          }
-          
-          const count = badgeText ? parseInt(badgeText, 10) : 0;
-          if (isNaN(count)) return;
-          
-          const cached = tabStatsCache.get(tab.id) || { count: 0, url: tab.url };
-          if (count > cached.count) {
-            const diff = count - cached.count;
-            accumulateToGlobalTotal(diff);
-            tabStatsCache.set(tab.id, { count: count, url: tab.url });
-          }
-        });
-      });
-    });
-  }
+  if (alarm.name !== "pollBadgeCounts") return;
+  withStatsLock(async () => {
+    const [tabs, counts] = await Promise.all([
+      new Promise((resolve) => chrome.tabs.query({}, resolve)),
+      getTabCounts()
+    ]);
+    const next = {};
+    let increment = 0;
+    await Promise.all(tabs.map(async (tab) => {
+      if (!tab.id || tab.id === chrome.tabs.TAB_ID_NONE) return;
+      const count = await getBadgeCount(tab.id);
+      if (count === null) return; // tab closed mid-poll
+      const prev = counts[tab.id] || 0;
+      if (count > prev) increment += count - prev;
+      next[tab.id] = count;
+    }));
+    // Rebuilding the map from live tabs also prunes entries for closed tabs,
+    // so no tabs.onRemoved bookkeeping is needed.
+    await setTabCounts(next);
+    accumulateToGlobalTotal(increment);
+  });
 });
 
-// Intercept page navigation to grab final count before resets
+// Harvest a page's final count right before navigation resets its badge.
 chrome.webNavigation.onBeforeNavigate.addListener((details) => {
   if (!SUPPORTS_ACTION_COUNT) return;
-  if (details.frameId === 0) { // Only main frame navigation
-    chrome.action.getBadgeText({ tabId: details.tabId }, (badgeText) => {
-      if (!chrome.runtime.lastError && badgeText) {
-        const count = parseInt(badgeText, 10);
-        if (!isNaN(count) && count > 0) {
-          const cached = tabStatsCache.get(details.tabId) || { count: 0 };
-          const diff = count - cached.count;
-          if (diff > 0) {
-            accumulateToGlobalTotal(diff);
-          }
-        }
-      }
-      // Reset tab stats cache for the new page load
-      tabStatsCache.set(details.tabId, { count: 0, url: details.url });
-    });
-  }
-});
-
-// Clean up tab stats cache when tab is closed
-chrome.tabs.onRemoved.addListener((tabId) => {
-  tabStatsCache.delete(tabId);
+  if (details.frameId !== 0) return; // main frame only
+  withStatsLock(async () => {
+    const count = await getBadgeCount(details.tabId);
+    const counts = await getTabCounts();
+    const prev = counts[details.tabId] || 0;
+    if (count !== null && count > prev) {
+      accumulateToGlobalTotal(count - prev);
+    }
+    // The new page load starts counting from zero.
+    counts[details.tabId] = 0;
+    await setTabCounts(counts);
+  });
 });
 
 // Handle incoming messages from popup.js
