@@ -13,6 +13,15 @@
   "coreRuleSubtitle": { "message": "防護全球核心廣告與追蹤網域" },
   "chinaRuleTitle": { "message": "中文廣告最佳化規則 (AdRules)" },
   "chinaRuleSubtitle": { "message": "針對亞洲／中文網站特定廣告強化" },
+  "collapseTitle": { "message": "收合廣告留下的空位" },
+  "collapseSubtitle": { "message": "移除被攔截廣告留下的空白區塊" },
+  "managedSitesTitle": { "message": "已暫停的網站" },
+  "managedRemoveAria": { "message": "移除" },
+  "customRulesTitle": { "message": "自訂攔截網域" },
+  "customRulePlaceholder": { "message": "例如 ads.example.com" },
+  "customRuleAdd": { "message": "新增" },
+  "customHideTitle": { "message": "自訂隱藏元素（CSS 選擇器）" },
+  "customHidePlaceholder": { "message": "例如 .ad-banner, #ad-slot" },
   "footerStatus": { "message": "執行狀態：正常" },
   "toggleProtection": { "message": "切換防護" }
 }
