@@ -67,6 +67,11 @@ def build_target(browser):
     # Copy popup files
     target_popup = os.path.join(target_dir, 'popup')
     shutil.copytree(SRC_POPUP_DIR, target_popup)
+
+    # Copy content scripts (cosmetic collapse pass)
+    src_content = os.path.join(SRC_DIR, 'content')
+    if os.path.isdir(src_content):
+        shutil.copytree(src_content, os.path.join(target_dir, 'content'))
     
     # Copy icons
     target_icons = os.path.join(target_dir, 'icons')
