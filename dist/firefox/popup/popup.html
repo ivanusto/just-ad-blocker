@@ -70,7 +70,7 @@
       <!-- Ruleset Options -->
       <div class="ruleset-container">
         <div class="section-title" data-i18n="advancedFilters">進階過濾器</div>
-        
+
         <div class="control-row">
           <div class="control-info">
             <div class="control-title" data-i18n="coreRuleTitle">Core 基本防護規則</div>
@@ -92,6 +92,47 @@
             <span class="slider"></span>
           </label>
         </div>
+
+        <div class="control-row">
+          <div class="control-info">
+            <div class="control-title" data-i18n="collapseTitle">收合廣告留下的空位</div>
+            <div class="control-subtitle" data-i18n="collapseSubtitle">移除被攔截廣告留下的空白區塊</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="collapseToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Custom block rules -->
+      <div class="ruleset-container">
+        <div class="section-title" data-i18n="customRulesTitle">自訂攔截網域</div>
+        <div class="custom-input-row">
+          <input type="text" id="customRuleInput" class="custom-input"
+                 placeholder="ads.example.com" data-i18n-ph="customRulePlaceholder"
+                 autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button id="customRuleAdd" class="custom-add-btn" data-i18n="customRuleAdd">新增</button>
+        </div>
+        <ul class="managed-list" id="customList"></ul>
+      </div>
+
+      <!-- Custom element-hiding (CSS selectors) -->
+      <div class="ruleset-container">
+        <div class="section-title" data-i18n="customHideTitle">自訂隱藏元素（CSS 選擇器）</div>
+        <div class="custom-input-row">
+          <input type="text" id="hideSelectorInput" class="custom-input"
+                 placeholder=".ad-banner, #ad-slot" data-i18n-ph="customHidePlaceholder"
+                 autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button id="hideSelectorAdd" class="custom-add-btn" data-i18n="customRuleAdd">新增</button>
+        </div>
+        <ul class="managed-list" id="hideList"></ul>
+      </div>
+
+      <!-- Managed (whitelisted) sites -->
+      <div class="ruleset-container" id="managedSitesContainer" style="display:none;">
+        <div class="section-title" data-i18n="managedSitesTitle">已暫停的網站</div>
+        <ul class="managed-list" id="managedList"></ul>
       </div>
 
     </section>
