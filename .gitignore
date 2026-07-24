@@ -1,5 +1,9 @@
-# Build cache (regenerable upstream filter lists, ~14 MB)
+# Build cache & output
 scripts/.cache/
+dist/
+*.zip
+*.xpi
+publish.config.json
 
 # Chrome-generated indexed ruleset cache (created at load time)
 dist/chrome/_metadata/

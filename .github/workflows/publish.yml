@@ -1,0 +1,65 @@
+name: Auto Release & Publish to Stores
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Publish target (all, chrome, firefox)'
+        required: false
+        default: 'all'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build & Publish to Stores
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build extension
+        run: python scripts/build.py
+
+      - name: Publish to Stores
+        run: node publish.js ${{ github.event.inputs.target || 'all' }}
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+
+      - name: Determine Version
+        id: get_version
+        run: |
+          TAG_VER="${GITHUB_REF#refs/tags/}"
+          echo "TAG_VER=${TAG_VER}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ env.TAG_VER }}
+          name: "Release ${{ env.TAG_VER }}"
+          generate_release_notes: true
+          files: |
+            dist/just-ad-blocker-chrome-*.zip
+            dist/firefox.xpi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
