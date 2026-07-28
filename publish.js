@@ -185,7 +185,12 @@ async function publishFirefox(amo, zipPath, version) {
   const manifestPath = fs.existsSync(path.join(__dirname, 'src', 'manifest.json.template')) 
     ? path.join(__dirname, 'src', 'manifest.json.template')
     : path.join(__dirname, 'manifest.json');
-  const version = JSON.parse(fs.readFileSync(manifestPath, 'utf8')).version;
+  const rawManifest = fs.readFileSync(manifestPath, 'utf8');
+  const versionMatch = rawManifest.match(/"version":\s*"([^"]+)"/);
+  if (!versionMatch) {
+    throw new Error('無法從 manifest 中解析出 version');
+  }
+  const version = versionMatch[1];
   const cfg = loadConfig();
   console.log(`發佈 v${version} → ${target}`);
 

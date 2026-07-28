@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # needed to dispatch the store-publish workflow below
 
 jobs:
   rebuild:
@@ -72,3 +73,14 @@ jobs:
             "just-ad-blocker-v${V}.xpi" \
             --title "Just Ad Blocker v${V}" \
             --notes "Automated filter-rule refresh. Core/China rulesets recompiled from the latest AdGuard DNS filter, EasyList and AdRules."
+
+      # Tags created with the workflow's own GITHUB_TOKEN do not fire `on: push:
+      # tags` workflows (GitHub's recursive-trigger guard), so the release above
+      # never reached publish.yml on its own — that's why v1.1.4 had to be
+      # uploaded to the Chrome Web Store by hand. workflow_dispatch is exempt
+      # from that guard, so dispatch the store publish explicitly.
+      - name: Trigger store publish (Chrome Web Store / AMO)
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish.yml --ref main -f target=all

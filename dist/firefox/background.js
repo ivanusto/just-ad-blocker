@@ -49,22 +49,43 @@ const CUSTOM_RULE_ID_START = 20000000;
 const CUSTOM_RULE_ID_RANGE = 10000000;
 
 // Chrome can auto-display the per-tab blocked count as badge text via the
-// declarativeNetRequest feedback APIs. Firefox implements none of them, so we
-// feature-detect and degrade gracefully instead of throwing at runtime.
-// The method is reached via a variable so Firefox's add-on linter does not flag
-// a static reference to an API it hasn't implemented.
+// declarativeNetRequest feedback APIs. Firefox does not ship them yet (MDN
+// documents the surface, but its compat data still lists them as unsupported;
+// getMatchedRules/onRuleMatchedDebug additionally hide behind the
+// extensions.dnr.feedback pref), so we feature-detect and degrade gracefully.
+// We probe the promise-based `browser` namespace first so the day Firefox does
+// ship it, this lights up without a code change; Chrome is reached through its
+// own namespace. The method is reached via a variable so Firefox's add-on
+// linter does not flag a static reference to an API it hasn't implemented.
 const ACTION_OPTS_METHOD = "setExtensionActionOptions";
-const SUPPORTS_ACTION_COUNT =
-  typeof chrome.declarativeNetRequest[ACTION_OPTS_METHOD] === "function";
+const dnrWithActionCount = (() => {
+  if (typeof browser !== "undefined" &&
+      browser.declarativeNetRequest &&
+      typeof browser.declarativeNetRequest[ACTION_OPTS_METHOD] === "function") {
+    return browser.declarativeNetRequest;
+  }
+  if (typeof chrome !== "undefined" &&
+      chrome.declarativeNetRequest &&
+      typeof chrome.declarativeNetRequest[ACTION_OPTS_METHOD] === "function") {
+    return chrome.declarativeNetRequest;
+  }
+  return null;
+})();
+const SUPPORTS_ACTION_COUNT = dnrWithActionCount !== null;
 
-// Ask Chrome to mirror the matched-rule count into the toolbar badge. No-op
-// (and never throws) on browsers that don't support it.
+// Ask the browser to mirror the matched-rule count into the toolbar badge.
+// No-op (and never throws) on browsers that don't support it. Handles both
+// promise-returning (Firefox `browser.*`, Chrome MV3 without callback) and
+// synchronous failure paths.
 function enableBadgeCount() {
   if (!SUPPORTS_ACTION_COUNT) return;
   try {
-    chrome.declarativeNetRequest[ACTION_OPTS_METHOD]({
+    const ret = dnrWithActionCount[ACTION_OPTS_METHOD]({
       displayActionCountAsBadgeText: true
     });
+    if (ret && typeof ret.catch === "function") {
+      ret.catch((e) => console.warn("Action-count badge rejected:", e));
+    }
   } catch (e) {
     console.warn("Action-count badge not supported here:", e);
   }

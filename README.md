@@ -20,6 +20,10 @@
 
 ## 安裝
 
+### Chrome（推薦：Chrome Web Store）
+
+直接從 [Chrome Web Store 安裝 Just Ad Blocker](https://chromewebstore.google.com/detail/just-ad-blocker/eijcgcfifflkbglemgjogkaoppbilbkb)，之後的版本更新由瀏覽器自動完成。
+
 ### Chrome / Edge（載入未封裝項目）
 
 1. 開啟 `chrome://extensions`
@@ -32,6 +36,12 @@
 - 永久安裝未簽署的 `.xpi` 需使用 Firefox Developer Edition / Nightly / ESR，並將 `xpinstall.signatures.required` 設為 `false`；正式發佈則需經 [AMO](https://addons.mozilla.org/) 簽署。
 
 > 也可以直接到 [Releases](../../releases) 下載打包好的 `dist/chrome` zip 與 `firefox.xpi`。
+
+## 更新機制與更新時間
+
+- **過濾規則每週自動更新**：GitHub Actions 於每週一 03:00 UTC 自動抓取上游清單（AdGuard DNS filter、EasyList、AdRules）重新編譯；只有在規則實際變動時才會自動升版、發佈新的 [Release](../../releases)，並將新版本送交 Chrome Web Store。
+- **商店上的「更新日期」**：[Chrome Web Store 頁面](https://chromewebstore.google.com/detail/just-ad-blocker/eijcgcfifflkbglemgjogkaoppbilbkb)顯示的更新時間是通過 Google 審核後的上架時間，會比 GitHub Release 晚數小時到數天（視審核速度而定）。若商店版本落後，最新規則永遠可以在 Releases 取得。
+- **已安裝的使用者**：Chrome 會在商店版本更新後自動升級，無需手動操作。
 
 ## 進階使用：自訂規則與版面整潔
 
@@ -108,7 +118,7 @@ dist/                     # 建置輸出（chrome/、firefox/、firefox.xpi）
 
 ## 已知限制
 
-- **Firefox 不顯示攔截次數**：Chrome 透過 `declarativeNetRequest.setExtensionActionOptions` 將攔截數顯示於圖示徽章，但 Firefox 尚未實作此 API（亦無 `getMatchedRules`／`onRuleMatchedDebug`）。因此 Firefox 版本不顯示「本頁攔截」與「累計攔截」數字，攔截功能本身不受影響。
+- **Firefox 不顯示攔截次數**：Chrome 透過 `declarativeNetRequest.setExtensionActionOptions` 將攔截數顯示於圖示徽章，但 Firefox 目前仍未出貨此 API。注意：[MDN 的 declarativeNetRequest 文件](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/declarativeNetRequest)雖列出 `setExtensionActionOptions`、`getMatchedRules`、`onRuleMatchedDebug`（MDN 記載的是完整 API 規格），其瀏覽器相容性資料中 Firefox 欄位仍為「不支援」；`getMatchedRules`／`onRuleMatchedDebug` 更僅在使用者手動開啟 `extensions.dnr.feedback` 偏好設定後才可用，無法作為正式功能依賴。本專案程式碼已改為同時偵測 `browser.*` 與 `chrome.*` 命名空間（feature detection），待 Firefox 正式支援後，徽章計數會自動生效、無需改版。在那之前 Firefox 版本不顯示「本頁攔截」與「累計攔截」數字，攔截功能本身不受影響。
 
 ## 規則來源與授權
 
