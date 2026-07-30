@@ -50,8 +50,8 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         run: |
           V="${{ steps.bump.outputs.version }}"
-          ( cd dist/chrome && zip -qr "../../just-ad-blocker-chrome-v${V}.zip" . -x '_metadata/*' )
-          cp dist/firefox.xpi "just-ad-blocker-v${V}.xpi"
+          ( cd dist/chrome && zip -qr "../just-ad-blocker-chrome-v${V}.zip" . -x '_metadata/*' )
+          cp dist/firefox.xpi "dist/just-ad-blocker-v${V}.xpi"
 
       - name: Commit rebuilt extension
         if: steps.changes.outputs.changed == 'true'
@@ -69,8 +69,8 @@ jobs:
         run: |
           V="${{ steps.bump.outputs.version }}"
           gh release create "v${V}" \
-            "just-ad-blocker-chrome-v${V}.zip" \
-            "just-ad-blocker-v${V}.xpi" \
+            "dist/just-ad-blocker-chrome-v${V}.zip" \
+            "dist/just-ad-blocker-v${V}.xpi" \
             --title "Just Ad Blocker v${V}" \
             --notes "Automated filter-rule refresh. Core/China rulesets recompiled from the latest AdGuard DNS filter, EasyList and AdRules."
 
