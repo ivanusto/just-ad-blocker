@@ -1,0 +1,16 @@
+{
+  "name": "just-ad-blocker-store-assets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Regenerates Chrome Web Store / AMO listing assets from the real popup UI.",
+  "license": "MPL-2.0",
+  "scripts": {
+    "screenshots": "node screenshots.js",
+    "tiles": "node tiles.js",
+    "video": "node video.js",
+    "images": "node screenshots.js && node tiles.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

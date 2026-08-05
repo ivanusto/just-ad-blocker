@@ -21,8 +21,12 @@
 | 類別（Category） | Productivity |
 | 語言 | English |
 | 商店圖示 | 已含在 ZIP 內，通常自動帶入（icon128.png） |
-| 螢幕截圖 | 上傳 `docs\store-assets\screenshot-1.png`、`screenshot-2.png`、`screenshot-3.png` |
+| 螢幕截圖 | 上傳 `docs\store-assets\screenshot-1.png` ～ `screenshot-5.png`（共 5 張，1280×800） |
 | 小型宣傳圖塊 | 上傳 `docs\store-assets\promo-tile-440x280.png` |
+| 宣傳影片（選用） | 只接受 YouTube 網址，無法直接上傳檔案。用 `node scripts/store-assets/video.js` 產生 MP4 後自行上傳 YouTube，再把網址填進此欄 |
+
+> 素材全部由 `scripts/store-assets/` 產生（用真實 popup UI 渲染）。popup 改版後重跑
+> `node scripts/store-assets/screenshots.js` 與 `tiles.js` 即可更新，詳見該資料夾的 README。
 | 官方網址（Homepage） | `https://github.com/ivanusto/just-ad-blocker` |
 | 支援網址（Support） | `https://github.com/ivanusto/just-ad-blocker/issues` |
 
@@ -196,7 +200,7 @@ Just Ad Blocker does not collect, store, or transmit any personal data. It conta
 Full policy: https://github.com/ivanusto/just-ad-blocker/blob/main/PRIVACY.md
 ```
 
-**圖片**：AMO 的截圖沒有固定尺寸限制，可直接上傳 `docs\store-assets\` 的三張截圖。
+**圖片**：AMO 的截圖沒有固定尺寸限制，可直接上傳 `docs\store-assets\` 的五張截圖。AMO 沒有影片欄位。
 
 ### 4. 送審
 

@@ -1,5 +1,8 @@
 # Build cache & output
 scripts/.cache/
+scripts/store-assets/.work/
+scripts/store-assets/node_modules/
+scripts/store-assets/package-lock.json
 dist/
 *.zip
 *.xpi
