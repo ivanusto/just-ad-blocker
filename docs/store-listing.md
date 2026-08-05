@@ -200,7 +200,7 @@ ad blocker, adblock, privacy, tracker blocker, manifest v3, declarativeNetReques
 
 ### License（授權）
 ```
-MIT (extension code). Filter lists remain under their respective licenses:
+Mozilla Public License 2.0 (MPL-2.0) — extension code. Filter lists remain under their respective licenses:
 AdGuard DNS filter, EasyList, AdRules — see their respective repositories.
 ```
 

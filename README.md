@@ -122,4 +122,4 @@ dist/                     # 建置輸出（chrome/、firefox/、firefox.xpi）
 
 ## 規則來源與授權
 
-過濾清單版權屬於各自維護團隊，依其授權散布：AdGuard DNS filter、EasyList、AdRules。本專案程式碼以 MIT 授權釋出。
+過濾清單版權屬於各自維護團隊，依其授權散布：AdGuard DNS filter、EasyList、AdRules。本專案程式碼以 MPL-2.0 授權釋出（見 [LICENSE](LICENSE)）。

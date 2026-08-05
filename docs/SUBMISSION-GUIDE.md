@@ -173,7 +173,7 @@ Blocking itself works fully.
 | Categories | Privacy & Security |
 | Support email | ivanusto@gmail.com |
 | Support website | `https://github.com/ivanusto/just-ad-blocker/issues` |
-| License | MIT |
+| License | Mozilla Public License 2.0 (MPL-2.0) |
 | Privacy policy | 貼下方【AMO 隱私政策】 |
 
 **【AMO Summary】**：
