@@ -9,6 +9,11 @@ extension with "Could not load manifest").
 Output rulesets:
   - rules_core.json   : AdGuard DNS filter + EasyList   (global ad/tracker blocking)
   - rules_china.json  : AdRules                          (Chinese/Asian sites)
+
+DNR resolves conflicts by priority, so ABP's action precedence is encoded as
+four bands: block (1) < exception (2) < $important block (3) < $important
+exception (4). `$badfilter` lines are collected in a first pass and cancel the
+identically-specified filter instead of being compiled into a rule of their own.
 """
 
 import os
@@ -294,6 +299,8 @@ def parse_options(options):
         'excluded_domains': [],
         'domain_type': None,  # 'thirdParty' | 'firstParty'
         'match_case': False,
+        'important': False,
+        'badfilter': False,
     }
     if not options:
         return result
@@ -330,7 +337,18 @@ def parse_options(options):
         if key in ('match-case',):
             result['match_case'] = True
             continue
-        if key in ('important', 'popup', 'all', 'first-party', '1p', 'strict1p', 'strict3p'):
+        if key == 'important':
+            # ABP: an $important block outranks @@ exceptions. DNR has no action
+            # precedence we can lean on, so this is expressed as a priority
+            # bump in compile_ruleset (see PRIORITY_* below).
+            result['important'] = True
+            continue
+        if key == 'badfilter':
+            # This line exists only to cancel an identical rule from another
+            # list. Flag it; compile_ruleset collects these in a first pass.
+            result['badfilter'] = True
+            continue
+        if key in ('popup', 'all', 'first-party', '1p', 'strict1p', 'strict3p'):
             # No precise DNR equivalent; ignore the modifier but keep the rule.
             continue
         if key in RES_MAP:
@@ -410,11 +428,68 @@ def is_valid_urlfilter(pattern):
     return True
 
 
+# DNR resolves a conflict by priority first, so ABP's action precedence has to
+# be encoded as four bands. Highest wins.
+PRIORITY_BLOCK = 1
+PRIORITY_ALLOW = 2
+PRIORITY_IMPORTANT_BLOCK = 3
+PRIORITY_IMPORTANT_ALLOW = 4
+
+
+def rule_priority(p, opts):
+    if opts['important']:
+        return PRIORITY_IMPORTANT_ALLOW if p['exception'] else PRIORITY_IMPORTANT_BLOCK
+    return PRIORITY_ALLOW if p['exception'] else PRIORITY_BLOCK
+
+
+def badfilter_signature(p):
+    """Identity of a filter for $badfilter matching: the pattern plus its options
+    with `badfilter` removed and the rest order-normalised, so `a$b,c$badfilter`
+    cancels `a$c,b`. Domain lists are sorted for the same reason.
+
+    uBO also lets a $badfilter carrying $domain= subtract single domains from a
+    filter's domain list; that partial form is not supported here, only whole-rule
+    cancellation."""
+    tokens = []
+    for opt in (p['options'] or '').split(','):
+        opt = opt.strip().lower()
+        if not opt or opt == 'badfilter':
+            continue
+        if opt.startswith('domain='):
+            doms = sorted(d for d in opt[len('domain='):].split('|') if d)
+            opt = 'domain=' + '|'.join(doms)
+        tokens.append(opt)
+    return (p['exception'], p['regex'], p['pattern'], tuple(sorted(tokens)))
+
+
+def collect_badfilters(sources):
+    """First pass: every filter identity that a $badfilter line cancels."""
+    cancelled = set()
+    for src in sources:
+        cache_path = os.path.join(CACHE_DIR, src['cache'])
+        if not os.path.exists(cache_path):
+            download_list(src['name'], src['url'], cache_path)
+        with open(cache_path, 'r', encoding='utf-8', errors='ignore') as f:
+            for raw in f:
+                if 'badfilter' not in raw:
+                    continue
+                p = parse_line(raw)
+                if p is None:
+                    continue
+                opts = parse_options(p['options'])
+                if opts is None or not opts['badfilter']:
+                    continue
+                cancelled.add(badfilter_signature(p))
+    return cancelled
+
+
 def is_pure_domain_block(p, opts):
     """True if the rule is just '||domain^' with no extra conditions, so it can
     be merged into an efficient requestDomains chunk."""
     if p['exception'] or p['regex']:
         return False
+    if opts['important']:
+        return False  # needs its own priority band, can't join a shared chunk
     if opts['resource_types'] or opts['excluded_resource_types']:
         return False
     if opts['domains'] or opts['excluded_domains'] or opts['domain_type']:
@@ -433,11 +508,15 @@ def is_pure_domain_block(p, opts):
 def compile_ruleset(out_name, sources):
     print(f"\n=== Building {out_name} ===")
     domains = set()
-    block_rules = []   # individual block rules (urlFilter/regexFilter)
-    allow_rules = []   # exception rules
-    seen = set()       # dedupe signatures
+    block_rules = []       # individual block rules (urlFilter/regexFilter)
+    allow_rules = []       # exception rules
+    important_rules = []   # $important blocks and exceptions (priority 3/4)
+    seen = set()           # dedupe signatures
 
-    stats = {'lines': 0, 'cosmetic': 0, 'dropped': 0, 'bad_regex': 0, 'bad_url': 0}
+    stats = {'lines': 0, 'cosmetic': 0, 'dropped': 0, 'bad_regex': 0,
+             'bad_url': 0, 'badfilter': 0}
+
+    cancelled = collect_badfilters(sources)
 
     for src in sources:
         cache_path = os.path.join(CACHE_DIR, src['cache'])
@@ -452,6 +531,11 @@ def compile_ruleset(out_name, sources):
                 opts = parse_options(p['options'])
                 if opts is None:
                     stats['dropped'] += 1
+                    continue
+                if opts['badfilter']:
+                    continue  # the cancelling line itself is never a rule
+                if badfilter_signature(p) in cancelled:
+                    stats['badfilter'] += 1
                     continue
 
                 if is_pure_domain_block(p, opts):
@@ -472,14 +556,18 @@ def compile_ruleset(out_name, sources):
                     cond['urlFilter'] = url_pattern
 
                 action = 'allow' if p['exception'] else 'block'
-                sig = (action, json.dumps(cond, sort_keys=True))
+                priority = rule_priority(p, opts)
+                sig = (action, priority, json.dumps(cond, sort_keys=True))
                 if sig in seen:
                     continue
                 seen.add(sig)
-                rule = {'priority': 2 if p['exception'] else 1,
+                rule = {'priority': priority,
                         'action': {'type': action},
                         'condition': cond}
-                (allow_rules if p['exception'] else block_rules).append(rule)
+                if opts['important']:
+                    important_rules.append(rule)
+                else:
+                    (allow_rules if p['exception'] else block_rules).append(rule)
 
     # Chunk pure-domain blocks into requestDomains rules of 100 each.
     domain_rules = []
@@ -494,17 +582,21 @@ def compile_ruleset(out_name, sources):
             },
         })
 
-    # Assemble: allow rules first (highest value), then domain chunks, then path rules.
-    assembled = allow_rules + domain_rules + block_rules
+    # Assemble: the rules we must never trim first (exceptions and $important),
+    # then domain chunks, then ordinary path rules.
+    protected = allow_rules + important_rules + domain_rules
+    assembled = protected + block_rules
     if len(assembled) > MAX_RULES_PER_SET:
         print(f"  WARNING: {len(assembled)} rules exceeds cap {MAX_RULES_PER_SET}; trimming path rules")
-        keep = MAX_RULES_PER_SET - len(allow_rules) - len(domain_rules)
-        assembled = allow_rules + domain_rules + block_rules[:max(0, keep)]
+        keep = MAX_RULES_PER_SET - len(protected)
+        assembled = protected + block_rules[:max(0, keep)]
 
     print(f"  source lines parsed : {stats['lines']}")
     print(f"  unique block domains: {len(domain_list)} -> {len(domain_rules)} chunk rules")
     print(f"  path/regex blocks   : {len(block_rules)} (dropped {stats['bad_regex']} bad regex, {stats['bad_url']} bad urlFilter)")
     print(f"  exception (allow)   : {len(allow_rules)}")
+    print(f"  $important rules    : {len(important_rules)}")
+    print(f"  cancelled by badfilter: {stats['badfilter']}")
     print(f"  unsupported dropped : {stats['dropped']}")
     print(f"  TOTAL rules         : {len(assembled)}")
     return assembled
