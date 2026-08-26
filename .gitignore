@@ -11,6 +11,9 @@ publish.config.json
 # Chrome-generated indexed ruleset cache (created at load time)
 dist/chrome/_metadata/
 
+# Throwaway Chrome profile from scripts/check_collapse.py
+.check-collapse-profile/
+
 # Claude Code local settings
 .claude/
 

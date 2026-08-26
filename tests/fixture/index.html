@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>collapse regression fixture</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; }
+  .slot { border: 1px solid #ccc; padding: 8px; margin-bottom: 16px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+</style>
+</head>
+<body>
+
+<!-- Case 1: a real ad image that the shipped rulesets block. Wrapped twice so the
+     ancestor walk has something to climb. Expected: collapsed. -->
+<div class="slot" id="ad-slot">
+  <div class="ad-wrap">
+    <img id="ad-img" width="300" height="250"
+         src="https://pagead2.googlesyndication.com/pagead/js/ad.png" alt="">
+  </div>
+</div>
+
+<!-- Case 2: the login-captcha pattern. The element starts with an empty src,
+     which fires `error` in Chrome, and only later gets its real URL. This is what
+     https://www.globalmyb2b.com/GEBANK/Login.aspx does to #imgCode.
+     Expected: never collapsed, visible once cap.png arrives. -->
+<div class="slot">
+  <div class="row">
+    <img id="captcha-img" src="" style="width:100px;height:29px" alt="">
+    <img id="captcha-reload" alt=""
+         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+  </div>
+</div>
+
+<!-- Case 3: a <video> whose <source> children cannot load. The browser fires
+     `error` on each <source> by design; that must not take the <video> (or its
+     wrapper) with it. Expected: #vid stays visible. -->
+<div class="slot" id="vid-slot">
+  <video id="vid" width="240" height="80" controls>
+    <source id="vid-source" src="/missing-clip.webm" type="video/webm">
+    <source src="/missing-clip.mp4" type="video/mp4">
+  </video>
+</div>
+
+<script>
+  // Same shape as the bank page: clear first, assign the real image a moment later.
+  setTimeout(function () {
+    document.getElementById("captcha-img").src = "/cap.png?t=" + Date.now();
+  }, 400);
+</script>
+</body>
+</html>
